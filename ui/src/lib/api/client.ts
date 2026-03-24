@@ -1,3 +1,5 @@
+import { withBasePath } from '../basePath'
+
 /** Base fetch wrapper with credentials and error handling */
 async function parseResponseBody(res: Response): Promise<any> {
   const contentType = (res.headers.get('content-type') || '').toLowerCase()
@@ -32,10 +34,11 @@ async function request<T = unknown>(
   url: string,
   options: RequestInit = {},
 ): Promise<T> {
+  const resolvedUrl = withBasePath(url)
   const isFormDataBody =
     typeof FormData !== 'undefined' && options.body instanceof FormData
 
-  const res = await fetch(url, {
+  const res = await fetch(resolvedUrl, {
     credentials: 'include',
     headers: {
       ...(isFormDataBody ? {} : { 'Content-Type': 'application/json' }),
@@ -45,11 +48,11 @@ async function request<T = unknown>(
   })
 
   const body = await parseResponseBody(res)
-  const isAuthEndpoint = url.startsWith('/api/auth/')
+  const isAuthEndpoint = resolvedUrl.endsWith('/api/auth/login') || resolvedUrl.endsWith('/api/auth/session') || resolvedUrl.endsWith('/api/auth/logout') || resolvedUrl.includes('/api/auth/')
 
   if (res.status === 401 && !isAuthEndpoint) {
     // Session expired — redirect to login
-    window.location.href = '/login'
+    window.location.href = withBasePath('/login')
     throw new Error('Session expired')
   }
 

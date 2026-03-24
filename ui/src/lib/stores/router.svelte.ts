@@ -1,5 +1,6 @@
 import type { SingletonTab } from './tabs.svelte'
 import { getActiveTab, getTabs, openDashboardTab, openHomeTab, openSingletonTab, setActiveTab } from './tabs.svelte'
+import { getBasePath, withBasePath, stripBasePath } from '../basePath'
 
 // ── URL ↔ Tab mapping ────────────────────────────────────────────
 
@@ -12,6 +13,8 @@ const TAB_PATHS: Record<string, string> = {
   'admin': '/admin',
   'governance': '/governance',
   'pipelines': '/pipelines',
+  'models': '/models',
+  'model': '/models',
   'settings': '/license',
 }
 
@@ -23,6 +26,7 @@ const PATH_TABS: Record<string, { type: SingletonTab['type']; label: string }> =
   '/admin': { type: 'admin', label: 'Admin' },
   '/governance': { type: 'governance', label: 'Governance' },
   '/pipelines': { type: 'pipelines', label: 'Pipelines' },
+  '/models': { type: 'models', label: 'Models' },
   '/settings': { type: 'settings', label: 'License' },
   '/license': { type: 'settings', label: 'License' },
 }
@@ -41,8 +45,9 @@ export function getCurrentPipelineId(): string | undefined {
 // ── URL helpers ──────────────────────────────────────────────────
 
 function buildUrl(path: string, tabId?: string): string {
-  if (tabId) return `${path}?tab=${tabId}`
-  return path
+  const fullPath = withBasePath(path)
+  if (tabId) return `${fullPath}?tab=${tabId}`
+  return fullPath
 }
 
 function currentTabParam(): string | null {
@@ -52,11 +57,10 @@ function currentTabParam(): string | null {
 function pushUrl(path: string, tabId?: string): void {
   const url = buildUrl(path, tabId)
   const currentPath = window.location.pathname
-  const currentTabId = currentTabParam()
 
-  if (currentPath !== path) {
+  if (currentPath !== withBasePath(path)) {
     history.pushState(null, '', url)
-  } else if (currentTabId !== tabId) {
+  } else if (currentTabParam() !== tabId) {
     history.replaceState(null, '', url)
   }
 }
@@ -109,7 +113,7 @@ export function pushPipelineList(): void {
 // ── Parse current URL ───────────────────────────────────────────
 
 export function parseRoute(): { type: string; dashboardId?: string; pipelineId?: string } {
-  const path = window.location.pathname
+  const path = stripBasePath(window.location.pathname)
 
   // /dashboards/:id
   const dashMatch = path.match(/^\/dashboards\/(.+)$/)
@@ -147,7 +151,8 @@ function tryRestoreFromTabParam(): boolean {
 }
 
 function updateSubRouteState(): void {
-  const match = window.location.pathname.match(/^\/pipelines\/(.+)$/)
+  const path = stripBasePath(window.location.pathname)
+  const match = path.match(/^\/pipelines\/(.+)$/)
   pipelineId = match?.[1]
 }
 
@@ -201,7 +206,7 @@ export function initRouter(): void {
   // Seed ?tab= if missing so a subsequent reload works
   const activeTab = getActiveTab()
   if (activeTab && !currentTabParam()) {
-    const url = buildUrl(window.location.pathname, activeTab.id)
+    const url = buildUrl(stripBasePath(window.location.pathname), activeTab.id)
     history.replaceState(null, '', url)
   }
 

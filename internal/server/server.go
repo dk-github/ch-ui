@@ -194,22 +194,25 @@ func (s *Server) setupRoutes() {
 				fmt.Fprintln(w, "Frontend assets not available. Build the frontend first or use a release binary.")
 			})
 		} else {
+			indexHTML := s.buildIndexHTML(cfg.BasePath)
 			fileServer := http.FileServer(http.FS(s.frontendFS))
+
 			r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
 				// Try to serve the file directly
 				path := r.URL.Path[1:] // strip leading /
 				f, err := s.frontendFS.Open(path)
 				if err != nil {
-					// File not found — serve index.html for SPA routing
+					// File not found — serve index.html (with base path rewriting) for SPA routing
+					w.Header().Set("Content-Type", "text/html; charset=utf-8")
 					w.Header().Set("Cache-Control", "no-cache")
-					r.URL.Path = "/"
+					w.Write(indexHTML)
+					return
+				}
+				f.Close()
+				if strings.HasPrefix(path, "assets/") {
+					w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 				} else {
-					f.Close()
-					if strings.HasPrefix(path, "assets/") {
-						w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-					} else {
-						w.Header().Set("Cache-Control", "no-cache")
-					}
+					w.Header().Set("Cache-Control", "no-cache")
 				}
 				fileServer.ServeHTTP(w, r)
 			})
@@ -217,6 +220,17 @@ func (s *Server) setupRoutes() {
 	}
 
 	slog.Info("Routes configured")
+}
+
+func (s *Server) buildIndexHTML(basePath string) []byte {
+	data, _ := fs.ReadFile(s.frontendFS, "index.html")
+	if basePath == "" {
+		return data
+	}
+	html := strings.ReplaceAll(string(data), `"/assets/`, `"`+basePath+`/assets/`)
+	html = strings.Replace(html, "</head>",
+		fmt.Sprintf(`<script>window.__CH_UI_BASE_PATH__="%s"</script></head>`, basePath), 1)
+	return []byte(html)
 }
 
 // Start starts the HTTP server.

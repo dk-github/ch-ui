@@ -1,4 +1,5 @@
 import { apiDel, apiGet, apiPost, apiPut } from './client'
+import { withBasePath } from '../basePath'
 import type {
   BrainArtifact,
   BrainChat,
@@ -58,7 +59,7 @@ export async function streamBrainMessage(
   payload: { content: string; modelId?: string; schemaContext?: any; schemaContexts?: any[] },
   onEvent: (event: StreamEvent) => void,
 ): Promise<void> {
-  const response = await fetch(`/api/brain/chats/${encodeURIComponent(chatId)}/messages/stream`, {
+  const response = await fetch(withBasePath(`/api/brain/chats/${encodeURIComponent(chatId)}/messages/stream`), {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },

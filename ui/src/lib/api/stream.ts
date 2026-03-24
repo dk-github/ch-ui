@@ -1,4 +1,5 @@
 import type { ColumnMeta, QueryStats, StreamMessage } from '../types/query'
+import { withBasePath } from '../basePath'
 
 /** Execute a streaming query via NDJSON. Calls the provided callbacks as data arrives. */
 export async function executeStreamQuery(
@@ -9,7 +10,7 @@ export async function executeStreamQuery(
   onError: (error: string) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const res = await fetch('/api/query/stream', {
+  const res = await fetch(withBasePath('/api/query/stream'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query: sql }),

@@ -33,6 +33,9 @@ type Config struct {
 	ClickHouseURL  string // default http://localhost:8123
 	ConnectionName string // default Local ClickHouse
 
+	// Subpath deployment (e.g. "/ch-ui" when behind a reverse proxy)
+	BasePath string
+
 	// License
 	LicenseJSON string // Stored signed license JSON (loaded from DB at startup)
 }
@@ -126,6 +129,9 @@ func Load(configPath string) *Config {
 	}
 	if v := os.Getenv("TUNNEL_URL"); v != "" {
 		cfg.TunnelURL = v
+	}
+	if v := os.Getenv("BASE_PATH"); v != "" {
+		cfg.BasePath = strings.TrimRight(trimQuotes(v), "/")
 	}
 
 	// Derive defaults for computed fields
